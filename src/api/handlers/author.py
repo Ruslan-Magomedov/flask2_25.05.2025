@@ -4,6 +4,22 @@ from api.models.author import AuthorModel
 from api.models.quote import QuoteModel
 
 
+@app.get("/authors")
+def get_authors():
+    try:
+        query = db.session.scalars(db.select(AuthorModel)).all()
+    except Exception as e:
+        abort(503, f"Database error: {str(e)}")
+    authors_temp = [author.to_dict() for author in query]
+    return authors_temp, 200
+
+
+@app.get("/authors/<int:author_id>")
+def get_author_byid(author_id: int):
+    query = db.get_or_404(entity=AuthorModel, ident=author_id)
+    return query.to_dict(), 200
+
+
 @app.post("/authors")
 def create_author():
     author_data = request.json
@@ -17,6 +33,18 @@ def create_author():
     except Exception as e:
         abort(503, f"Database error: {str(e)}")
     return jsonify(author.to_dict()), 201
+
+
+@app.put("/authors/<int:author_id>")
+def change_author_byid(author_id: int):
+    new_data = request.json
+    result = check(new_data)
+
+    if not result[0]:
+        return abort(400, result[1].get('error'))
+        
+    query = db.get_or_404(entity=AuthorModel, ident=author_id)
+    return query.to_dict(), 200
 
 
 # URL: "/authors/<int:author_id>/quotes"
@@ -36,3 +64,4 @@ def author_quotes(author_id: int):
         return jsonify(new_quote.to_dict() | { "author_id" : author.id}), 201
     else:
         abort(405)
+
